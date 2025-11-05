@@ -4,8 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>SysPredictPC — Prototype</title>
-  <!-- CSS (mantén tu hoja actual) -->
-  <link rel="stylesheet" href="style.css">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="./style.css" />
+
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
@@ -153,9 +155,7 @@
                 <th>Estado</th>
               </tr>
             </thead>
-            <tbody>
-              <!-- Rellenado por JS -->
-            </tbody>
+            <tbody></tbody>
           </table>
         </div>
       </section>
@@ -166,9 +166,7 @@
           <h2>Predicciones</h2>
           <div class="muted">Proyección a 60s con CI y ETA</div>
         </div>
-        <div id="pred-grid" class="grid cards-grid">
-          <!-- Tarjetas generadas por JS -->
-        </div>
+        <div id="pred-grid" class="grid cards-grid"></div>
       </section>
 
       <!-- GRÁFICAS DEDICADAS -->
@@ -198,18 +196,14 @@
             <h3>Datos de la métrica</h3>
             <table class="table">
               <thead><tr><th>Clave</th><th>Valor</th></tr></thead>
-              <tbody id="gx-detail">
-                <!-- JS -->
-              </tbody>
+              <tbody id="gx-detail"></tbody>
             </table>
           </div>
           <div class="card">
             <h3>Hardware Relacionado</h3>
             <table class="table">
               <thead><tr><th>Propiedad</th><th>Detalle</th></tr></thead>
-              <tbody id="gx-hw">
-                <!-- JS -->
-              </tbody>
+              <tbody id="gx-hw"></tbody>
             </table>
           </div>
         </div>
@@ -238,8 +232,8 @@
               <div class="form-row">
                 <label for="rule-op">Condición</label>
                 <select id="rule-op">
-                  <option value=">">></option>
-                  <option value=">">></option>
+                  <option value=">">&gt;</option>
+                  <option value="<">&lt;</option>
                 </select>
               </div>
               <div class="form-row">
@@ -260,7 +254,7 @@
             <h3>Reglas activas</h3>
             <table id="tbl-rules" class="table">
               <thead><tr><th>#</th><th>Regla</th><th>Acción</th></tr></thead>
-              <tbody><!-- JS --></tbody>
+              <tbody></tbody>
             </table>
           </div>
         </div>
@@ -268,7 +262,7 @@
         <div id="rule-toast" class="toast hidden">Regla disparada</div>
       </section>
 
-      <!-- CONFIGURACIÓN (Apariencia mejorada y funcional) -->
+      <!-- CONFIGURACIÓN -->
       <section id="view-config" class="hidden">
         <div class="view-head">
           <h2>Configuración</h2>
@@ -361,6 +355,6 @@
   </div>
 
   <!-- JS -->
-  <script src="./js/client.js?v=11"></script>
+  <script src="./client.js?v=12"></script>
 </body>
 </html>
