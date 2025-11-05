@@ -1,10 +1,13 @@
 /* ===========================
-   HardwareGuard - client.js v12
+   HardwareGuard - client.js v12 (ajustado)
    =========================== */
 
 /* ---------- Estado global ---------- */
-const API_BASE = "http://127.0.0.1:8000";
-const WS_URL = "ws://127.0.0.1:8000/ws";
+// Acomoda host y protocolo automáticamente para evitar mixed-content.
+const HOST = location.hostname || "127.0.0.1";
+const API_BASE = `${location.protocol}//${HOST}:8000`;
+const WS_PROTO = location.protocol === "https:" ? "wss" : "ws";
+const WS_URL = `${WS_PROTO}://${HOST}:8000/ws`;
 
 let ws = null;
 let reconnectWait = 1000; // 1s → exponencial hasta 10s
@@ -86,7 +89,9 @@ function saveCfg() {
 /* ---------- Chart.js (gráfica única con datasets reusables) ---------- */
 let gxChart = null;
 function setupChart() {
-  const ctx = document.getElementById("gx-canvas").getContext("2d");
+  const canvas = document.getElementById("gx-canvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
   gxChart = new Chart(ctx, {
     type: "line",
     data: {
@@ -166,13 +171,16 @@ function connectWS() {
 loadOverview();
 function loadOverview() {
   fetch(`${API_BASE}/overview`)
-    .then(r => r.json())
+    .then(async (r) => {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    })
     .then(ov => {
       LAST_OVERVIEW = ov;
       const txt = [
         `CPU: ${ov.cpu_physical ?? "?"}/${ov.cpu_logical ?? "?"}`,
         `RAM: ${fmt(ov.memory_gb, 1)} GB`,
-        `Discos: ${(ov.disks || []).join(", ") || "—"}`,
+        `Discos: ${Array.isArray(ov.disks) ? ov.disks.join(", ") : "—"}`,
         `GPU: ${typeof ov.gpu === "string" ? ov.gpu : (ov.gpu?.name || "Desconocida")}`
       ].join(" • ");
       $("#overview").textContent = txt;
@@ -263,12 +271,12 @@ function renderDashboard(d) {
     : (bat === null ? "No reportado" : "Nivel reportado");
   pctBar($("#bat-bar"), bat ?? 0);
 
-  // Salud (score simple: peso CPU/Mem/GPU temp/Disco/Red/Batería)
+  // Salud (score simple)
   const score = clamp(
     100
     - (cpu*0.2)
     - (Math.max(0, memPct-50)*0.3)
-    - (Math.max(0, gpuTemp-60)*0.5)
+    - (Math.max(0, (d.gpu_temp ?? 0)-60)*0.5)
     - (Math.min(100, diskPct)*0.1)
     - (Math.min(100, netPct)*0.1)
     - ((bat!=null && bat<30) ? (30-bat)*0.5 : 0)
@@ -278,12 +286,12 @@ function renderDashboard(d) {
   const label = score >= 85 ? "Excelente" : score >= 65 ? "Buena" : score >= 45 ? "Media" : "Baja";
   $("#health-label").textContent = label;
 
-  // Contadores simples (OK/Warn/Crit)
+  // Contadores (OK/Warn/Crit)
   const counts = { ok:0, warn:0, crit:0 };
   function buck(v, warn, crit){ if (v>=crit) counts.crit++; else if (v>=warn) counts.warn++; else counts.ok++; }
   buck(cpu, 80, 95);
   buck(memPct, 80, 90);
-  buck(gpuTemp, 75, 85);
+  buck(d.gpu_temp ?? 0, 75, 85);
   buck(diskPct, 60, 85);
   buck(netPct, 60, 85);
   $("#ok-count").textContent = counts.ok;
@@ -322,7 +330,7 @@ function renderPredictions(forecast, badges) {
       const div = document.createElement("div");
       div.className = "card";
       const cls = b.level === "crit" ? "badge-crit" : b.level === "warn" ? "badge-warn" : "badge-ok";
-      div.innerHTML = `<span class="${cls}">${b.level.toUpperCase()}</span> <b style="margin-left:.5rem">${b.label || b.text}</b>`;
+      div.innerHTML = `<span class="${cls}">${(b.level||"").toUpperCase()}</span> <b style="margin-left:.5rem">${b.label || b.text || ""}</b>`;
       wrap.appendChild(div);
     });
     grid.appendChild(wrap);
@@ -339,13 +347,13 @@ function fillComponentsTable(ov) {
     ["CPU físicos", ov.cpu_physical],
     ["CPU lógicos", ov.cpu_logical],
     ["Memoria total", ov.memory_gb ? `${fmt(ov.memory_gb,1)} GB` : "—"],
-    ["Discos", (ov.disks || []).join(", ") || "—"],
+    ["Discos", Array.isArray(ov.disks) ? (ov.disks.join(", ") || "—") : "—"],
     ["GPU", typeof ov.gpu === "string" ? ov.gpu : (ov.gpu?.name || "Desconocida")]
   ];
 
   rows.forEach(([k,v]) => {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${k}</td><td>${v}</td><td>—</td><td><span class="badge-ok">OK</span></td>`;
+    tr.innerHTML = `<td>${k}</td><td>${v ?? "—"}</td><td>—</td><td><span class="badge-ok">OK</span></td>`;
     tbody.appendChild(tr);
   });
 }
@@ -392,10 +400,10 @@ function maybeRaiseAlerts(d) {
   const netUp = d.net_up_mb_s ?? 0, netDown = d.net_down_mb_s ?? 0;
   const net = netUp + netDown;
 
-  if (cpu >= CFG.thr_cpu) notif.add("CPU alta", `CPU ${fmt(cpu)}% >= ${CFG.thr_cpu}%`, "crit");
-  if (memPct >= CFG.thr_mem) notif.add("Memoria alta", `Memoria ${fmt(memPct)}% >= ${CFG.thr_mem}%`, "warn");
-  if (gpuTemp >= CFG.thr_gpu_temp) notif.add("GPU caliente", `GPU ${fmt(gpuTemp)}ºC >= ${CFG.thr_gpu_temp}ºC`, "warn");
-  if (net >= CFG.thr_net) notif.add("Tráfico de red elevado", `${fmt(net,1)} MB/s >= ${CFG.thr_net} MB/s`, "ok");
+  if (cpu >= CFG.thr_cpu) notif.add("CPU alta", `CPU ${fmt(cpu)}% ≥ ${CFG.thr_cpu}%`, "crit");
+  if (memPct >= CFG.thr_mem) notif.add("Memoria alta", `Memoria ${fmt(memPct)}% ≥ ${CFG.thr_mem}%`, "warn");
+  if (gpuTemp >= CFG.thr_gpu_temp) notif.add("GPU caliente", `GPU ${fmt(gpuTemp)}ºC ≥ ${CFG.thr_gpu_temp}ºC`, "warn");
+  if (net >= CFG.thr_net) notif.add("Tráfico de red elevado", `${fmt(net,1)} MB/s ≥ ${CFG.thr_net} MB/s`, "ok");
 }
 
 /* ---------- Vistas / Navegación ---------- */
