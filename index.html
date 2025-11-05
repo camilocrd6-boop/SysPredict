@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="es" class="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SysPredictPC — Prototype</title>
+  <!-- CSS (mantén tu hoja actual) -->
+  <link rel="stylesheet" href="./css/style.css?v=11">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <!-- Barra superior -->
+  <header class="topbar">
+    <div class="left">
+      <button class="logo">S</button>
+      <div class="search">
+        <input id="search" type="search" placeholder="Buscar: cpu, gpu, memoria, disco, red, batería..." />
+      </div>
+    </div>
+    <div class="right">
+      <div id="conn-dot" class="conn offline" title="Estado de conexión"></div>
+      <button id="notif-btn" class="icon-btn" title="Notificaciones">
+        🔔 <span id="notif-badge" class="badge hidden">0</span>
+      </button>
+      <div id="notif-panel" class="notif-panel hidden">
+        <div class="notif-head">
+          <strong>Alertas</strong>
+          <button id="notif-clear" class="btn btn-ghost">Limpiar</button>
+        </div>
+        <div id="notif-list" class="notif-list"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Contenedor -->
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="nav">
+      <button class="sb-item active" data-view="dashboard">📊 Dashboard</button>
+      <button class="sb-item" data-view="componentes">🧩 Componentes</button>
+      <button class="sb-item" data-view="predicciones">🔮 Predicciones</button>
+      <button class="sb-item" data-view="graficas">📈 Gráficas</button>
+      <button class="sb-item" data-view="tareas">✅ Tareas</button>
+      <button class="sb-item" data-view="config">⚙️ Configuración</button>
+    </aside>
+
+    <!-- Main -->
+    <main class="content">
+
+      <!-- DASHBOARD -->
+      <section id="view-dashboard">
+        <div class="view-head">
+          <h2>Dashboard</h2>
+          <div id="overview" class="muted">Cargando overview…</div>
+        </div>
+
+        <!-- Estado general -->
+        <div class="card">
+          <div class="health">
+            <div class="health-meta">
+              <div class="health-score"><span id="score">—/100</span></div>
+              <div class="health-label" id="health-label">—</div>
+            </div>
+            <div class="health-barwrap">
+              <div id="health-bar" class="health-bar" style="width:0%"></div>
+            </div>
+            <div class="health-counters">
+              <div>OK: <b id="ok-count">—</b></div>
+              <div>Advertencias: <b id="warn-count">—</b></div>
+              <div>Críticas: <b id="crit-count">—</b></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="grid kpi-grid">
+          <!-- CPU -->
+          <div class="card kpi">
+            <div class="kpi-head">
+              <h3>CPU</h3><span id="cpu-pill" class="pill"></span>
+            </div>
+            <div class="kpi-value" id="cpu-val">—%</div>
+            <div class="kpi-sub" id="cpu-sub">—</div>
+            <div class="kpi-bar"><span id="cpu-bar" style="width:0%"></span></div>
+          </div>
+
+          <!-- GPU -->
+          <div class="card kpi">
+            <div class="kpi-head">
+              <h3>GPU</h3><span id="gpu-pill" class="pill"></span>
+            </div>
+            <div class="kpi-value" id="gpu-val">—%</div>
+            <div class="kpi-sub" id="gpu-sub">—</div>
+            <div class="kpi-bar"><span id="gpu-bar" style="width:0%"></span></div>
+          </div>
+
+          <!-- RAM -->
+          <div class="card kpi">
+            <div class="kpi-head">
+              <h3>Memoria</h3><span id="ram-pill" class="pill"></span>
+            </div>
+            <div class="kpi-value" id="ram-val">—%</div>
+            <div class="kpi-sub" id="ram-sub">—</div>
+            <div class="kpi-bar"><span id="ram-bar" style="width:0%"></span></div>
+          </div>
+
+          <!-- Disco -->
+          <div class="card kpi">
+            <div class="kpi-head">
+              <h3>Disco</h3><span id="disk-pill" class="pill"></span>
+            </div>
+            <div class="kpi-value" id="disk-val">—%</div>
+            <div class="kpi-sub" id="disk-sub">—</div>
+            <div class="kpi-bar"><span id="disk-bar" style="width:0%"></span></div>
+          </div>
+
+          <!-- Red -->
+          <div class="card kpi">
+            <div class="kpi-head">
+              <h3>Red</h3><span id="net-pill" class="pill"></span>
+            </div>
+            <div class="kpi-value" id="net-val">—%</div>
+            <div class="kpi-sub" id="net-sub">—</div>
+            <div class="kpi-bar"><span id="net-bar" style="width:0%"></span></div>
+          </div>
+
+          <!-- Batería -->
+          <div class="card kpi">
+            <div class="kpi-head">
+              <h3>Batería</h3><span id="bat-pill" class="pill"></span>
+            </div>
+            <div class="kpi-value" id="bat-val">—%</div>
+            <div class="kpi-sub" id="bat-sub">—</div>
+            <div class="kpi-bar"><span id="bat-bar" style="width:0%"></span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- COMPONENTES -->
+      <section id="view-componentes" class="hidden">
+        <div class="view-head">
+          <h2>Componentes</h2>
+          <div class="muted">Detalle de hardware y estado</div>
+        </div>
+        <div class="card">
+          <table id="tbl-components" class="table">
+            <thead>
+              <tr>
+                <th>Componente</th>
+                <th>Valor</th>
+                <th>Detalle</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Rellenado por JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- PREDICCIONES -->
+      <section id="view-predicciones" class="hidden">
+        <div class="view-head">
+          <h2>Predicciones</h2>
+          <div class="muted">Proyección a 60s con CI y ETA</div>
+        </div>
+        <div id="pred-grid" class="grid cards-grid">
+          <!-- Tarjetas generadas por JS -->
+        </div>
+      </section>
+
+      <!-- GRÁFICAS DEDICADAS -->
+      <section id="view-graficas" class="hidden">
+        <div class="view-head">
+          <h2>Gráficas</h2>
+          <div class="muted">Selecciona la métrica a visualizar</div>
+        </div>
+
+        <div id="gx-tabs" class="tabs">
+          <button class="tab active" data-gx="cpu">CPU</button>
+          <button class="tab" data-gx="mem">Memoria</button>
+          <button class="tab" data-gx="gpu">GPU</button>
+          <button class="tab" data-gx="disk">Disco</button>
+          <button class="tab" data-gx="net">Red</button>
+          <button class="tab" data-gx="bat">Batería</button>
+        </div>
+
+        <div class="card">
+          <div class="chart-wrap">
+            <canvas id="gx-canvas" height="300"></canvas>
+          </div>
+        </div>
+
+        <div class="grid grid-2">
+          <div class="card">
+            <h3>Datos de la métrica</h3>
+            <table class="table">
+              <thead><tr><th>Clave</th><th>Valor</th></tr></thead>
+              <tbody id="gx-detail">
+                <!-- JS -->
+              </tbody>
+            </table>
+          </div>
+          <div class="card">
+            <h3>Hardware Relacionado</h3>
+            <table class="table">
+              <thead><tr><th>Propiedad</th><th>Detalle</th></tr></thead>
+              <tbody id="gx-hw">
+                <!-- JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAREAS / REGLAS -->
+      <section id="view-tareas" class="hidden">
+        <div class="view-head">
+          <h2>Tareas (Reglas)</h2>
+          <div class="muted">Crea reglas simples para alertas en tiempo real</div>
+        </div>
+
+        <div class="grid grid-2">
+          <div class="card">
+            <h3>Nueva Regla</h3>
+            <form id="rule-form" class="form">
+              <div class="form-row">
+                <label for="rule-type">Métrica</label>
+                <select id="rule-type">
+                  <option value="cpu">CPU (%)</option>
+                  <option value="mem">Memoria (%)</option>
+                  <option value="gpu_temp">GPU Temp (°C)</option>
+                  <option value="net">Red (MB/s)</option>
+                </select>
+              </div>
+              <div class="form-row">
+                <label for="rule-op">Condición</label>
+                <select id="rule-op">
+                  <option value=">">></option>
+                  <option value=">">></option>
+                </select>
+              </div>
+              <div class="form-row">
+                <label for="rule-th">Umbral</label>
+                <input id="rule-th" type="number" value="90" />
+              </div>
+              <div class="form-row">
+                <label for="rule-dur">Duración (s)</label>
+                <input id="rule-dur" type="number" value="5" />
+              </div>
+              <div class="btn-row">
+                <button class="btn" type="submit">Agregar</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="card">
+            <h3>Reglas activas</h3>
+            <table id="tbl-rules" class="table">
+              <thead><tr><th>#</th><th>Regla</th><th>Acción</th></tr></thead>
+              <tbody><!-- JS --></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="rule-toast" class="toast hidden">Regla disparada</div>
+      </section>
+
+      <!-- CONFIGURACIÓN (Apariencia mejorada y funcional) -->
+      <section id="view-config" class="hidden">
+        <div class="view-head">
+          <h2>Configuración</h2>
+        </div>
+
+        <div class="config-grid">
+          <!-- Apariencia -->
+          <div class="card">
+            <h3>Apariencia</h3>
+            <div class="form-row">
+              <label for="cfg-theme">Tema</label>
+              <select id="cfg-theme">
+                <option value="system">Según sistema</option>
+                <option value="light">Claro</option>
+                <option value="dark">Oscuro</option>
+              </select>
+            </div>
+
+            <div class="form-row">
+              <label for="cfg-accent">Color de acento</label>
+              <input id="cfg-accent" type="color" value="#5ea9ff"/>
+            </div>
+
+            <div class="form-row">
+              <label for="cfg-density">Densidad</label>
+              <select id="cfg-density">
+                <option value="normal">Normal</option>
+                <option value="compact">Compacta</option>
+              </select>
+            </div>
+
+            <div class="form-row">
+              <label for="cfg-anim">Animaciones</label>
+              <label class="switch">
+                <input id="cfg-anim" type="checkbox" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="form-row">
+              <label for="cfg-thick">Grosor de línea (gráficas)</label>
+              <input id="cfg-thick" type="range" min="1" max="4" step="1" value="2">
+            </div>
+          </div>
+
+          <!-- Umbrales y Unidades -->
+          <div class="card">
+            <h3>Umbrales & Unidades</h3>
+            <div class="form-row">
+              <label for="cfg-cpu">CPU umbral %</label>
+              <input id="cfg-cpu" type="number" min="50" max="100" step="1" value="95">
+            </div>
+            <div class="form-row">
+              <label for="cfg-mem">Memoria umbral %</label>
+              <input id="cfg-mem" type="number" min="50" max="100" step="1" value="90">
+            </div>
+            <div class="form-row">
+              <label for="cfg-gpu">GPU temperatura ºC</label>
+              <input id="cfg-gpu" type="number" min="60" max="100" step="1" value="85">
+            </div>
+            <div class="form-row">
+              <label for="cfg-net">Red umbral</label>
+              <input id="cfg-net" type="number" min="1" max="10000" step="1" value="50">
+            </div>
+            <div class="form-row">
+              <label for="cfg-net-unit">Unidad de Red</label>
+              <select id="cfg-net-unit">
+                <option value="MBps">MB/s</option>
+                <option value="Mbps">Mb/s</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Acciones -->
+          <div class="card">
+            <h3>Acciones</h3>
+            <div class="btn-row">
+              <button id="cfg-save" class="btn">Guardar</button>
+              <button id="cfg-reset" class="btn btn-ghost">Restablecer</button>
+              <button id="cfg-export" class="btn btn-ghost">Exportar</button>
+              <button id="cfg-import" class="btn btn-ghost">Importar</button>
+              <input id="cfg-import-file" type="file" accept="application/json" style="display:none" />
+            </div>
+            <p class="muted">Los cambios de Apariencia se aplican inmediatamente a la UI y a las gráficas.</p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- JS -->
+  <script src="./js/client.js?v=11"></script>
+</body>
+</html>
